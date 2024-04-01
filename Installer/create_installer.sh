@@ -2,13 +2,13 @@
 
 # Creates installer for different channel versions.
 # Run this script from the local BlackHole repo's root directory.
-# If this script is not executable from the Terminal, 
+# If this script is not executable from the Terminal,
 # it may need execute permissions first by running this command:
 #   chmod +x create_installer.sh
 
 driverName="BlackHole"
-devTeamID="Q5C99V536K" # ⚠️ Replace this with your own developer team ID
-notarize=true # To skip notarization, set this to false
+devTeamID="N7U6KY9MAU" # ⚠️ Replace this with your own developer team ID
+notarize=false # To skip notarization, set this to false
 notarizeProfile="notarize" # ⚠️ Replace this with your own notarytool keychain profile name
 
 ############################################################################
@@ -35,28 +35,28 @@ for channels in 2; do #16 64 128 256; do
     ch=$channels"ch"
     driverVartiantName=$driverName$ch
     bundleID="audio.existential.$driverVartiantName"
-    
+
     # Build
     xcodebuild \
       -project BlackHole.xcodeproj \
       -configuration Release \
       -target BlackHole CONFIGURATION_BUILD_DIR=build \
       PRODUCT_BUNDLE_IDENTIFIER=$bundleID \
-      GCC_PREPROCESSOR_DEFINITIONS='$GCC_PREPROCESSOR_DEFINITIONS 
-      kNumber_Of_Channels='$channels' 
-      kPlugIn_BundleID=\"'$bundleID'\" 
+      GCC_PREPROCESSOR_DEFINITIONS='$GCC_PREPROCESSOR_DEFINITIONS
+      kNumber_Of_Channels='$channels'
+      kPlugIn_BundleID=\"'$bundleID'\"
       kDriver_Name=\"'$driverName'\"'
-    
+
     # Generate a new UUID
     uuid=$(uuidgen)
     awk '{sub(/e395c745-4eea-4d94-bb92-46224221047c/,"'$uuid'")}1' build/BlackHole.driver/Contents/Info.plist > Temp.plist
     mv Temp.plist build/BlackHole.driver/Contents/Info.plist
-    
+
     mkdir Installer/root
     driverBundleName=$driverVartiantName.driver
     mv build/BlackHole.driver Installer/root/$driverBundleName
     rm -r build
-    
+
     # Sign
     codesign \
       --force \
@@ -64,11 +64,11 @@ for channels in 2; do #16 64 128 256; do
       --options runtime \
       --sign $devTeamID \
       Installer/root/$driverBundleName
-    
+
     # Create package with pkgbuild
     chmod 755 Installer/Scripts/preinstall
     chmod 755 Installer/Scripts/postinstall
-    
+
     pkgbuild \
       --sign $devTeamID \
       --root Installer/root \
@@ -76,10 +76,10 @@ for channels in 2; do #16 64 128 256; do
       --install-location /Library/Audio/Plug-Ins/HAL \
       "Installer/$driverName.pkg"
     rm -r Installer/root
-    
+
     # Create installer with productbuild
     cd Installer
-    
+
     echo "<?xml version=\"1.0\" encoding='utf-8'?>
     <installer-gui-script minSpecVersion='2'>
         <title>$driverName: Audio Loopback Driver ($ch) $version</title>
@@ -102,7 +102,7 @@ for channels in 2; do #16 64 128 256; do
         </choice>
         <pkg-ref id=\"$bundleID\" version=\"$version\" onConclusion='none'>$driverName.pkg</pkg-ref>
     </installer-gui-script>" >> distribution.xml
-    
+
     # Build
     installerPkgName="$driverVartiantName-$version.pkg"
     productbuild \
@@ -112,7 +112,7 @@ for channels in 2; do #16 64 128 256; do
       --package-path $driverName.pkg $installerPkgName
     rm distribution.xml
     rm -f $driverName.pkg
-    
+
     # Notarize and Staple
     if [ "$notarize" = true ]; then
         xcrun \
@@ -121,7 +121,7 @@ for channels in 2; do #16 64 128 256; do
           --progress \
           --wait \
           --keychain-profile $notarizeProfile
-        
+
         xcrun stapler staple $installerPkgName
     fi
 
